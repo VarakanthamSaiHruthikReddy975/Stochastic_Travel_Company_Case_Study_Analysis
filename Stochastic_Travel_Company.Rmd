@@ -1,0 +1,470 @@
+---
+title: "Assignment_3"
+author: "Sai Hruthik Reddy Varakantham-Dorababu Chintala-Radhika Girish Gupta"
+output: word_document
+---
+
+```{r}
+#Retention Modeling At Scholastic Travel Company
+
+#Before constructing our decision tree models and random forest related charts we first need to clean our data. The data can be cleaned for numerical data by replacing the NA values with the mean value.
+
+#Whereas in case of categorical variables we can replace the NA values with the most occuring values in the column
+
+#But sometimes they can also lead to outliers for which in the future we would need to use other packages
+
+#First loading our file into a variable to create a dataframe and creating Backup_xlsx to keep the raw data in place
+setwd("~/Desktop/Data_Mining/All Files") #Setting our working directory
+pacman::p_load("pacman","rio","tidyverse","rpart","rpart.plot","readxl") #Loading our packages
+Assignment_3<-read_xlsx("Homework-3.xlsx") #Storing our raw data into The Assignment_3 variable
+Backup_xlsx <- Assignment_3 
+Backup_xlsx2<-Assignment_3
+```
+The data cleaning can be done on the Assignment_3 file
+
+```{r}
+#Data Cleaning
+
+#Replace NA values with mean and converting into factor since grade is easier to work with when it is in factor format
+
+#So removing NA values for From.Grade
+library("zoo")
+e1<- as.numeric(Assignment_3$From.Grade)
+e1<-na.aggregate(e1)
+Assignment_3$From.Grade<- as.factor(e1)
+                                      #view(Assignment_3)
+
+#So removing NA values for To.Grade
+
+library("zoo")
+e1<- as.numeric(Assignment_3$To.Grade)
+e1<-na.aggregate(e1)
+Assignment_3$To.Grade<- as.factor(e1)
+                                      #view(Assignment_3)
+
+#There are no outliers in Group State
+sum(is.na(Assignment_3$Group.State))
+table(Assignment_3$Group.State)
+Assignment_3$Group.State<-as.factor(Assignment_3$Group.State)
+
+#There are no outliers in Is.Non.Annual.
+sum(is.na(Assignment_3$Is.Non.Annual.))
+table(Assignment_3$Is.Non.Annual.)
+
+#There are no outliers in Days.
+sum(is.na(Assignment_3$Days))
+table(Assignment_3$Days)
+
+
+#There are no outliers in Travel.Type
+sum(is.na(Assignment_3$Travel.Type))
+table(Assignment_3$Travel.Type)
+
+#There are no outliers in Travel.Type
+sum(is.na(Assignment_3$Special.Pay))
+table(Assignment_3$Special.Pay)
+
+a3<-as.character(Assignment_3$Special.Pay)
+e3<-replace_na(a3,"NA")
+Assignment_3$Special.Pay<-e3
+Assignment_3$Special.Pay<-as.factor(Assignment_3$Special.Pay)
+                                  #view(Assignment_3)
+
+# For posix format we converted almost all of them in as.date format
+Assignment_3$Departure.Date <- as.Date(Assignment_3$Departure.Date)
+Assignment_3$Return.Date <- as.Date(Assignment_3$Return.Date)
+Assignment_3$Deposit.Date <- as.Date(Assignment_3$Deposit.Date)
+
+Assignment_3$Early.RPL <- as.numeric(Assignment_3$Early.RPL)
+Assignment_3$Early.RPL <- as.Date(Assignment_3$Early.RPL, origin = "1899-12-30")
+
+Assignment_3$Latest.RPL <- as.numeric(Assignment_3$Latest.RPL)
+Assignment_3$Latest.RPL <- as.Date(Assignment_3$Latest.RPL, origin = "1899-12-30")
+
+Assignment_3$Initial.System.Date <- as.numeric(Assignment_3$Initial.System.Date)
+Assignment_3$Initial.System.Date <- as.Date(Assignment_3$Initial.System.Date, origin = "1899-12-30")
+
+Assignment_3$FirstMeeting <- as.numeric(Assignment_3$FirstMeeting)
+Assignment_3$FirstMeeting <- as.Date(Assignment_3$FirstMeeting, origin = "1899-12-30")
+
+Assignment_3$LastMeeting <- as.numeric(Assignment_3$LastMeeting)
+Assignment_3$LastMeeting <- as.Date(Assignment_3$LastMeeting, origin = "1899-12-30")
+Assignment_3 <- Assignment_3 %>%
+  mutate(Column = pmin(Assignment_3$Departure.Date,Assignment_3$Return.Date,Assignment_3$Deposit.Date,Assignment_3$Early.RPL, Assignment_3$Latest.RPL)) 
+Assignment_3$Initial.System.Date <- as.Date(ifelse(is.na(Assignment_3$Initial.System.Date),Assignment_3$Column,Assignment_3$Initial.System.Date), origin = "1970-01-01" )
+Assignment_3 <- select(Assignment_3, -Column)
+
+
+#There are no outliers in Tuition
+sum(is.na(Assignment_3$Tuition))
+table(Assignment_3$Tuition)
+
+#There are no outliers in FRP.active
+sum(is.na(Assignment_3$FRP.Active))
+table(Assignment_3$FRP.Active)
+
+#There are no outliers in FRP.Cancelled
+sum(is.na(Assignment_3$FRP.Cancelled))
+table(Assignment_3$FRP.Cancelled)
+
+#There are no outliers in FRP.Takeup percent
+sum(is.na(Assignment_3$FRP.Take.up.percent.))
+table(Assignment_3$FRP.Take.up.percent.)
+
+#There are no outliers in Cancelled.Pax
+sum(is.na(Assignment_3$Cancelled.Pax))
+table(Assignment_3$Cancelled.Pax)
+
+#There are no outliers in Total.Discount.pax
+sum(is.na(Assignment_3$Total.Discount.Pax))
+table(Assignment_3$Total.Discount.Pax)
+
+#There are outliers in Poverty.Code
+sum(is.na(Assignment_3$Poverty.Code))
+table(Assignment_3$Poverty.Code)
+
+a10<-as.character(Assignment_3$Poverty.Code)
+e10<-replace_na(a10,"B")
+Assignment_3$Poverty.Code<-as.factor(e10)
+                                   #view(Assignment_3)
+
+
+#There are no outliers in Region
+sum(is.na(Assignment_3$Region))
+table(Assignment_3$Region)
+Assignment_3$Region <- as.factor(Assignment_3$Region)
+
+#There are outliers in CRM.Segment
+sum(is.na(Assignment_3$CRM.Segment))
+table(Assignment_3$CRM.Segment)
+
+#Assignment_3$CRM.Segment <- Backup_xlsx3$CRM.Segment
+
+a22<-as.character(Assignment_3$CRM.Segment)
+e22<-replace_na(a22,"10")
+Assignment_3$CRM.Segment<-as.factor(e22)
+#view(Assignment_3)
+
+
+
+#There are no outliers in School.Type
+sum(is.na(Assignment_3$School.Type))
+table(Assignment_3$School.Type)
+Assignment_3$Region <- as.factor(Assignment_3$Region)
+
+#There are no outliers in Parent.Meeting.Flag
+sum(is.na(Assignment_3$Parent.Meeting.Flag))
+table(Assignment_3$Parent.Meeting.Flag)
+
+#There are no outliers in MDR.LowGrade
+
+#Assignment_3$MDR.Low.Grade<- Backup_xlsx3$MDR.Low.Grade
+sum(is.na(Assignment_3$MDR.Low.Grade))
+table(Assignment_3$MDR.Low.Grade)
+
+Assignment_3$MDR.Low.Grade<-as.factor(Assignment_3$MDR.Low.Grade)
+
+
+#There are outliers in Parent.Meeting.Flag
+sum(is.na(Assignment_3$MDR.High.Grade))
+table(Assignment_3$MDR.High.Grade)
+
+
+a80<-as.character(Assignment_3$MDR.High.Grade)
+e80<-replace_na(a80,"8")
+Assignment_3$MDR.High.Grade<-as.factor(e80)
+                                           #view(Assignment_3)
+
+
+#There are outliers in School.Type
+sum(is.na(Assignment_3$School.Type))
+table(Assignment_3$School.Type)
+
+Assignment_3$School.Type<-as.factor(Assignment_3$School.Type)
+
+#There are outliers in Total.school.Enrolment
+sum(is.na(Assignment_3$Total.School.Enrollment))
+table(Assignment_3$Total.School.Enrollment)
+
+e48<- as.numeric(Assignment_3$Total.School.Enrollment)
+e48<-na.aggregate(e48)
+Assignment_3$Total.School.Enrollment<-e48
+
+#There are outliers in EZ.Pay.Take.Up.Rate
+sum(is.na(Assignment_3$EZ.Pay.Take.Up.Rate))
+table(Assignment_3$EZ.Pay.Take.Up.Rate)
+
+#There are outliers in School.Sponsor
+sum(is.na(Assignment_3$School.Sponsor))
+table(Assignment_3$School.Sponsor)
+
+#There are no outliers in SPR.Product.Type
+sum(is.na(Assignment_3$SPR.Product.Type))
+table(Assignment_3$SPR.Product.Type)
+
+Assignment_3$SPR.Product.Type<-as.factor(Assignment_3$SPR.Product.Type)
+
+#There are no outliers in SPR.New.Existing
+sum(is.na(Assignment_3$SPR.New.Existing))
+table(Assignment_3$SPR.New.Existing)
+Assignment_3$SPR.New.Existing<-as.factor(Assignment_3$SPR.New.Existing)
+
+
+#There are no outliers in FPP
+sum(is.na(Assignment_3$FPP))
+table(Assignment_3$FPP)
+
+#There are no outliers in Total.Pax
+sum(is.na(Assignment_3$Total.Pax))
+table(Assignment_3$Total.Pax)
+
+#There are no outliers in SPR.Group.Revenue
+sum(is.na(Assignment_3$SPR.Group.Revenue))
+table(Assignment_3$SPR.Group.Revenue)
+
+#There are no outliers in Number of meetings with parents
+sum(is.na(Assignment_3$NumberOfMeetingswithParents))
+table(Assignment_3$NumberOfMeetingswithParents)
+
+Assignment_3$NumberOfMeetingswithParents<-as.factor(Assignment_3$NumberOfMeetingswithParents)
+
+#There are no outliers in Number of meetings with parents
+sum(is.na(Assignment_3$NumberOfMeetingswithParents))
+table(Assignment_3$NumberOfMeetingswithParents)
+
+#There are no outliers in DifferenceTraveltoFirstMeeting
+sum(is.na(Assignment_3$DifferenceTraveltoFirstMeeting))
+table(Assignment_3$DifferenceTraveltoFirstMeeting)
+
+Assignment_3$DifferenceTraveltoFirstMeeting<-as.factor(Assignment_3$DifferenceTraveltoFirstMeeting)
+
+
+#There are no outliers in DifferenceTraveltoLastMeeting
+sum(is.na(Assignment_3$DifferenceTraveltoLastMeeting))
+table(Assignment_3$DifferenceTraveltoLastMeeting)
+
+Assignment_3$DifferenceTraveltoLastMeeting<-as.factor(Assignment_3$DifferenceTraveltoLastMeeting)
+
+#There are no outliers in SchoolgradetypeLow
+sum(is.na(Assignment_3$SchoolGradeTypeLow))
+table(Assignment_3$SchoolGradeTypeLow)
+
+Assignment_3$SchoolGradeTypeLow<-as.factor(Assignment_3$SchoolGradeTypeLow)
+
+#There are no outliers in SchoolgradetypeLow
+sum(is.na(Assignment_3$SchoolGradeTypeHigh))
+table(Assignment_3$SchoolGradeTypeHigh)
+
+#Assignment_3$SchoolGradeTypeHigh<-Backup_xlsx3$SchoolGradeTypeHigh
+Assignment_3$SchoolGradeTypeHigh<-as.factor(Assignment_3$SchoolGradeTypeHigh)
+
+Assignment_3$SchoolGradeType<-as.factor(Assignment_3$SchoolGradeType)
+Assignment_3$SchoolGradeType<-as.factor(Assignment_3$MajorProgramCode)
+Assignment_3$DepartureMonth<-as.factor(Assignment_3$DepartureMonth)
+
+Assignment_3$GroupGradeTypeLow<-as.factor(Assignment_3$GroupGradeTypeLow)
+Assignment_3$GroupGradeTypeHigh<-as.factor(Assignment_3$GroupGradeTypeHigh)
+Assignment_3$GroupGradeType<-as.factor(Assignment_3$GroupGradeType)
+
+Assignment_3$MajorProgramCode<-as.factor(Assignment_3$MajorProgramCode)
+Assignment_3$SingleGradeTripFlag<-as.factor(Assignment_3$SingleGradeTripFlag)
+
+
+Assignment_3$GroupGradeType<-as.factor(Assignment_3$GroupGradeType)
+
+
+Assignment_3$FPP.to.School.enrollment<-NULL
+
+#There are no outliers in FPP.TO.PAX
+sum(is.na(Assignment_3$FPP.to.PAX))
+table(Assignment_3$FPP.to.PAX)
+
+#There are no outliers in Num.of.non_FPP
+sum(is.na(Assignment_3$Num.of.Non_FPP.PAX))
+table(Assignment_3$Num.of.Non_FPP.PAX)
+
+#There are no outliers in SchoolSizeIndicator
+sum(is.na(Assignment_3$SchoolSizeIndicator))
+table(Assignment_3$SchoolSizeIndicator)
+
+a220<-as.character(Assignment_3$SchoolSizeIndicator)
+e220<-replace_na(a220,"S-M")
+Assignment_3$SchoolSizeIndicator<-as.factor(e220)
+#view(Assignment_3)
+
+Assignment_3$ID<-NULL
+Assignment_3$Program.Code<-as.factor(Assignment_3$Program.Code)
+Assignment_3$Travel.Type<-as.factor(Assignment_3$Travel.Type)
+
+```
+
+Exploratory Data Analysis(EDA)
+```{r}
+#Exploratory DataAnalysis Part
+
+#After replacing all the columns having NA values we remove some unimportant variables from the dataset
+
+#We do the chisquare tests on the variables we take the predictor variable and the targe variable and plot against each other.
+
+#Sample Example
+
+chisq.test(Assignment_3$Tuition,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$FRP.Cancelled,Assignment_3$Retained.in.2012.,correct = F)
+
+
+
+#chisq.test(Assignment_3$Parent.Meeting.Flag,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$Total.School.Enrollment,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$SRP.Group.Revenue,Assignment_3$Retained.in.2012.,correct = F)
+
+
+#chisq.test(Assignment_3$FRP.Cancelled,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$GroupGradeType,Assignment_3$Retained.in.2012.,correct = F)
+
+
+#chisq.test(Assignment_3$SchoolGradeType,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$FPP.to.School.enrollment,Assignment_3$Retained.in.2012.,correct = F)
+
+
+#chisq.test(Assignment_3$DifferenceTraveltoFirstMeeting,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$DifferenceTraveltoLastMeeting,Assignment_3$Retained.in.2012.,correct = F)
+
+
+#chisq.test(Assignment_3$NumberOfMeetingswithParents,Assignment_3$Retained.in.2012.,correct = F)
+
+
+#chisq.test(Assignment_3$FirstMeeting,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$LastMeeting,Assignment_3$Retained.in.2012.,correct = F)
+
+#chisq.test(Assignment_3$Group.State,Assignment_3$Retained.in.2012.,correct = F)
+
+#We did chi square test for all the variables and found these variables to be removed since their P-value is >0.05 which estabalishes null hypothesis therefore we remove them/ 
+
+
+#After the chi square test is done we remove the values giving p-value is more pertaining that we accept null hypothesis for this case and therefore we conclude that there is very less/ no relation virtually.
+
+
+#For most of the variables Chi-SQuare values we calculated many were in powers of e therefore concluding that p value is so less than 0.05 meaning that we could reject null hypothesis good enough to predict that there is a relationship between the variables.
+
+Assignment_3.1<- Assignment_3 #Creating a backup variable for Assignment-3 and constructing decision tree on that
+Assignment_3.2<-Assignment_3
+Assignment_3.1 <- select(Assignment_3.1,-c('Tuition','Early.RPL','Parent.Meeting.Flag','Total.School.Enrollment','SPR.Group.Revenue','FirstMeeting','LastMeeting','SchoolGradeType','Group.State','NumberOfMeetingswithParents','DifferenceTraveltoFirstMeeting','DifferenceTraveltoLastMeeting'))
+
+
+
+```
+
+
+```{r}
+#EDA(Continued)
+#More of them are in June month are retained
+Boxplot_1<- ggplot(data=Assignment_3,aes(x=DepartureMonth,y=Assignment_3$Retained.in.2012.,fill=Assignment_3$Retained.in.2012.))+geom_bar(stat = "identity")
+
+Boxplot_1
+```
+
+```{r}
+#Most of them retained are in middle school
+plot(Assignment_3[,42],main="Retain",ylab ="No",xlab="Target")
+```
+
+```{r}
+hist(Assignment_3$Tuition,xlab = "Tuition",col = "red")
+#More number of people pay an tuition of over 2000
+```
+Decison Tree Construction
+
+```{r}
+#Decision Tree Construction
+
+#The number of terminal nodes while pruning decreases or the R-software package tries to decrease n so we need to increase the value of cp to avoid overfitting
+
+#We also need to choose the cp values that give us the minimum error
+ set.seed(110)
+ indx<-sample(2,nrow(some_constant),replace=TRUE,prob = c(0.7,0.3))
+ train<-Assignment_3.1[indx==1,]
+ nrow(train)
+test<-Assignment_3.1[indx==2,]
+nrow(test)
+myFormula<-Retained.in.2012.~. 
+myTree<-rpart(myFormula, data = train, method = "class")
+rpart.plot(myTree)
+predict_train<-predict(myTree,data=train,type="class")
+mean_train<-mean(train$Retained.in.2012.!=predict_train) 
+mean_train
+predict_test<-predict(myTree, newdata=test,type="class") 
+mean_test<-mean(test$Retained.in.2012.!=predict_test)
+mean_test
+myTreeHPT<-rpart(myFormula, data=train,method = "class",parms = list(split="information"), control = rpart.control(minsplit = 15,minbucket=10,cp=0.01))
+rpart.plot(myTreeHPT)
+
+```
+Random Forest
+
+```{r}
+library(randomForest)
+Target <- Assignment_3.1$Retained.in.2012.
+rf <- randomForest(Target~ ., data =Assignment_3.1 , mtry = 3,
+                         importance = TRUE, na.action = na.omit)
+print(rf)
+
+
+```
+
+Proximity Matrix
+```{r}
+rf$proximity
+```
+
+
+
+
+
+
+Cross-Validation
+
+```{r}
+#Cross Validation tells us how good our model is
+
+Assignment_3.3<-Assignment_3.1
+colnames(Assignment_3.1)[42]<-"Some"
+
+library(ISLR)
+data("Assignment_3.3")
+attach(Assignment_3.3)
+
+High <- Assignment_3.3$Some
+Data<-data.frame(Assignment_3.3,High)
+
+#colnames(Assignment_3.3)[42]<- "Target"
+
+Data <- Data[sample(nrow(Data)),]
+k<-10
+nmethod <- 1
+folds <- cut(seq(1,nrow(Data)), breaks = k,labels = F)
+
+mod.err<- matrix(-1,k,nmethod,dimnames = list(paste0("Fold",1:k,c("Logistic Regression"))))
+
+for(i in 1:k)
+{
+  testindexes <- which(folds==i,arr.ind=T)
+  Test2 <- Data[testindexes,]
+    Train2 <- Data[-testindexes,]
+    
+    LogitModel <- glm(Some~.,data=Train2, family = "binomial")
+    pred <- predict(LogitModel,newdata = Test2,type="response")
+    pred_class <- as.factor(ifelse(pred>=0.5,"YES","NO"))
+    mod.err[i] <- mean(Test2$Some != pred_class)
+
+}
+   mean(model.err)              
+                 
+```
+
